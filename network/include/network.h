@@ -3,103 +3,117 @@
 #include <array>
 #include <winsock2.h>
 
-/*Steps of Socket Programming
-1. Create a Socket
-2. If it is a server than we need to give it an identity by binding it to sockaddr_in struct
-
-
-*/
-class Network
+using ConnectionType = enum ConnectionType
 {
-protected:
-    static constexpr uint32_t m_MaxBufferLength = 512;
-    static constexpr uint32_t m_PORT = 8888;
-    SOCKET m_socket;
-    struct sockaddr_in m_server;
-    int32_t m_slen, m_recvPktLen;
-    bool m_isInitialized;
-    std::string m_errorString;
+    TCP = SOCK_STREAM, UDP = SOCK_DGRAM
+};
 
-    std::array<int8_t, m_MaxBufferLength> m_buffer;
-    WSADATA m_wsa;
+using ConnectionSide = enum ConnectionSide
+{
+    SERVER, CLIENT
+};
+
+class Socket
+{
+public:
+    struct sockaddr_in m_sockaddr;
+    SOCKET m_socket;
 
 public:
-    Network()
+    Socket()
     {
-        m_isInitialized = true;
+        m_socket = socket(AF_INET, UDP, 0);
+        if (m_socket != INVALID_SOCKET)
+        {
+            m_sockaddr.sin_family = AF_INET;
+            m_sockaddr.sin_addr.s_addr = INADDR_ANY;
+            m_sockaddr.sin_port = htons(8888);
+        }
+    }
+
+    bool Set(ConnectionType type, std::string ip_address, uint32_t port)
+    {
+        m_socket = socket(AF_INET, type, 0);
+        if (m_socket != INVALID_SOCKET)
+        {
+            m_sockaddr.sin_family = AF_INET;
+            m_sockaddr.sin_addr.s_addr = inet_addr(ip_address.data());
+            m_sockaddr.sin_port = htons(port);
+            return true;
+        }
+        return false;
+    }
+
+    bool Bind()
+    {
+        if (bind(m_socket, (struct sockaddr*)&m_sockaddr, sizeof(m_sockaddr)) == SOCKET_ERROR) return false;
+        return true;
+    }
+
+    ~Socket()
+    {
+        closesocket(m_socket);
+    }
+};
+
+class Udp
+{
+private:
+    Socket m_socket;
+    WSADATA m_wsa;
+    struct sockaddr_in m_client; int32_t m_client_len;
+    std::string m_errorString;
+
+public:
+    bool m_status;
+    Udp(ConnectionSide side, std::string ip_address, uint32_t port)
+    {
+        m_status = true;
         m_errorString = "No Error";
-        m_slen = sizeof(m_server);
         if (WSAStartup(MAKEWORD(2, 2), &m_wsa) != 0)
         {
             m_errorString = "WSA Startup Failed, Error Code " + std::to_string(WSAGetLastError());
-            m_isInitialized = false;
+            m_status = false;
         }
-        if (m_isInitialized && (m_socket = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET) /*Creating Socket*/
+        if (!m_socket.Set(UDP, ip_address, port))
         {
-            m_errorString = "Socket Creation Failed, Error Code " + std::to_string(WSAGetLastError());
-            m_isInitialized = false;
+            m_errorString = "Socket Creation Failed " + std::to_string(WSAGetLastError());
+            m_status = false;
         }
         else
         {
-            m_server.sin_family = AF_INET; /*Always set it to AF_INET*/
-            m_server.sin_addr.s_addr = INADDR_ANY; /*Bind to any valid IPs this machine has*/
-            m_server.sin_port = htons(m_PORT); /*Port to bind this server*/
-
-            if (m_isInitialized && bind(m_socket, (struct sockaddr*)&m_server, sizeof(m_server)) == SOCKET_ERROR) /*Binding socket to our server*/
+            if (side == SERVER)
             {
-                m_errorString = "Bind Failed, Error Code " + std::to_string(WSAGetLastError());
-                m_isInitialized = false;
+                if (!m_socket.Bind())
+                {
+                    m_errorString = "Bind Failed, Error Code " + std::to_string(WSAGetLastError());
+                    m_status = false;
+                }
             }
         }
     }
-    ~Network()
+
+    std::string getLastError()
     {
-        closesocket(m_socket);
-        WSACleanup();
+        return m_errorString;
     }
-};
 
-class UDP_Server: public Network
-{
-private:
-    struct sockaddr_in m_client;
-
-public:
-    void listen()
+    int send(char* buffer, int length, Socket& client)
     {
-        printf("Waiting for data...");
-        fflush(stdout);
-        std::fill(m_buffer.begin(), m_buffer.end(), '\0');
-        while (1)
-        {
-            if ((m_recvPktLen = recvfrom(m_socket, (char*)m_buffer.data(), m_MaxBufferLength, 0, (struct sockaddr*)&m_client, &m_slen)) == SOCKET_ERROR)
-            {
-                m_errorString = "Receive Failed, Error Code " + std::to_string(WSAGetLastError());
-                break;
-            }
-
-            printf("Received packet from %s:%d\n", inet_ntoa(m_client.sin_addr), ntohs(m_client.sin_port));
-            printf("Data: %s\n", m_buffer);
-
-            if (sendto(m_socket, (char*)m_buffer.data(), m_recvPktLen, 0, (struct sockaddr*)&m_client, m_slen) == SOCKET_ERROR)
-            {
-                m_errorString = "Send Failed, Error Code " + std::to_string(WSAGetLastError());
-            }
-        }
+        return sendto(m_socket.m_socket, buffer, length, 0, (struct sockaddr*)&client.m_sockaddr, sizeof(client.m_sockaddr));
     }
-};
 
-class UDP_Client
-{
+    int send(char* buffer, int length, sockaddr_in& client, int& clientlen)
+    {
+        return sendto(m_socket.m_socket, buffer, length, 0, (struct sockaddr*)&client, clientlen);
+    }
 
-};
-
-class TCP_Server
-{
-
-};
-
-class TCP_Client
-{
-
+    int receive(char* buffer, sockaddr_in& clientInfo, int& clientInfoLen, int MaxBufferLength = 512)
+    {
+        return recvfrom(m_socket.m_socket, buffer, MaxBufferLength, 0, (struct sockaddr*)&clientInfo, &clientInfoLen);
+    }
+    int receive(char* buffer, int MaxBufferLength = 512)
+    {
+        return recvfrom(m_socket.m_socket, buffer, MaxBufferLength, 0, NULL, NULL);
+    }
 };
