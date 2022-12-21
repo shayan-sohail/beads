@@ -1,16 +1,14 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(demo)
+project(timer)
 
 set(SOURCES
     app/main.cpp
 )
-add_executable(demo ${RFFE_SOURCES} ${SOURCES} )
+add_executable(timer ${SOURCES} )
 
 target_include_directories(
-    demo
+    timer
     PUBLIC
     ${PROJECT_SOURCE_DIR}/include
 )
-
-target_compile_options(demo PRIVATE -std=c++20)
