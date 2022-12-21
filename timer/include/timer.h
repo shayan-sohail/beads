@@ -81,4 +81,5 @@ void Timer::t_sync()
             }
         }
     }
+    std::cout << "Exiting Thread" << std::endl;
 }

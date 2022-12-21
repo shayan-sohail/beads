@@ -1,6 +1,8 @@
 #include <iostream>
+#include <signal.h>
 #include "timer.h"
 
+bool g_signal = true;
 void firstCallback()
 {
     std::cout << "First Callback" << std::endl;
@@ -10,17 +12,17 @@ void secondCallback()
     std::cout << "Second Callback" << std::endl;
 }
 
+void signal_handler(int signum)
+{
+    g_signal = false;
+}
 int main()
 {
-    {
-        Timer T;
-        T.add_periodic(firstCallback, 1000);
-        T.add_periodic(secondCallback, 1000);
-        std::this_thread::sleep_for(std::chrono::seconds(3));
-        T.remove(firstCallback);
-        std::this_thread::sleep_for(std::chrono::seconds(3));
-    }
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    signal(SIGINT, signal_handler);
+    Timer T;
+    T.add_singleshot(firstCallback, 3000);
+    T.add_periodic(secondCallback, 1000);
+    while (g_signal) {};
 
     return 0;
 }
