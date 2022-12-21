@@ -5,6 +5,7 @@
 
 /*Steps of Socket Programming
 1. Create a Socket
+2. If it is a server than we need to give it an identity by binding it to sockaddr_in struct
 
 
 */
@@ -33,18 +34,18 @@ public:
             m_errorString = "WSA Startup Failed, Error Code " + std::to_string(WSAGetLastError());
             m_isInitialized = false;
         }
-        if (m_isInitialized && (m_socket = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET) /*Creating */
+        if (m_isInitialized && (m_socket = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET) /*Creating Socket*/
         {
             m_errorString = "Socket Creation Failed, Error Code " + std::to_string(WSAGetLastError());
             m_isInitialized = false;
         }
         else
         {
-            m_server.sin_family = AF_INET;
-            m_server.sin_addr.s_addr = INADDR_ANY;
-            m_server.sin_port = htons(m_PORT);
+            m_server.sin_family = AF_INET; /*Always set it to AF_INET*/
+            m_server.sin_addr.s_addr = INADDR_ANY; /*Bind to any valid IPs this machine has*/
+            m_server.sin_port = htons(m_PORT); /*Port to bind this server*/
 
-            if (m_isInitialized && bind(m_socket, (struct sockaddr*)&m_server, sizeof(m_server)) == SOCKET_ERROR)
+            if (m_isInitialized && bind(m_socket, (struct sockaddr*)&m_server, sizeof(m_server)) == SOCKET_ERROR) /*Binding socket to our server*/
             {
                 m_errorString = "Bind Failed, Error Code " + std::to_string(WSAGetLastError());
                 m_isInitialized = false;
