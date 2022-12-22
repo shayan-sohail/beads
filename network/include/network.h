@@ -1,119 +1,66 @@
 #pragma once
 #include <iostream>
-#include <array>
 #include <winsock2.h>
 
-using ConnectionType = enum ConnectionType
+using SocketType = enum SocketType
 {
-    TCP = SOCK_STREAM, UDP = SOCK_DGRAM
-};
-
-using ConnectionSide = enum ConnectionSide
-{
-    SERVER, CLIENT
+    TCP = 1,
+    UDP = 2
 };
 
 class Socket
 {
-public:
-    struct sockaddr_in m_sockaddr;
+    WSADATA wsa;
     SOCKET m_socket;
+    std::string m_errorString;
+    bool m_status;
 
 public:
-    Socket()
-    {
-        m_socket = socket(AF_INET, UDP, 0);
-        if (m_socket != INVALID_SOCKET)
-        {
-            m_sockaddr.sin_family = AF_INET;
-            m_sockaddr.sin_addr.s_addr = INADDR_ANY;
-            m_sockaddr.sin_port = htons(8888);
-        }
-    }
+    sockaddr_in m_sockaddr;
+    int32_t m_len;
 
-    bool Set(ConnectionType type, std::string ip_address, uint32_t port)
+    Socket() {}
+    Socket(SocketType type, std::string_view ipaddress, uint16_t port)
     {
+        m_status = true;
+        m_errorString = "No Error";
+        if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
+        {
+            m_errorString = "WSA Startup Failed. Error Code : " + WSAGetLastError();
+            m_status = false;
+        }
         m_socket = socket(AF_INET, type, 0);
-        if (m_socket != INVALID_SOCKET)
+        if (m_socket == INVALID_SOCKET)
         {
-            m_sockaddr.sin_family = AF_INET;
-            m_sockaddr.sin_addr.s_addr = inet_addr(ip_address.data());
-            m_sockaddr.sin_port = htons(port);
-            return true;
+            m_errorString = "Socket Creation Failed. Error Code : " + WSAGetLastError();
+            m_status = false;
         }
-        return false;
+        m_sockaddr.sin_family = AF_INET;
+        m_sockaddr.sin_addr.s_addr = inet_addr(ipaddress.data());
+        m_sockaddr.sin_port = htons(port);
+        m_len = sizeof(m_sockaddr);
     }
 
-    bool Bind()
+    ssize_t receive(Socket& sourceInfo, char* buffer, ssize_t maxLength)
+    {
+        return recvfrom(m_socket, buffer, maxLength, 0, (struct sockaddr*)&sourceInfo.m_sockaddr, &sourceInfo.m_len);
+    }
+    ssize_t send(Socket& destinationInfo, char* message, ssize_t length)
+    {
+        return sendto(m_socket, message, length, 0, (struct sockaddr*)&destinationInfo.m_sockaddr, destinationInfo.m_len);
+    }
+    bool bind_socket()
     {
         if (bind(m_socket, (struct sockaddr*)&m_sockaddr, sizeof(m_sockaddr)) == SOCKET_ERROR) return false;
         return true;
     }
-
-    ~Socket()
-    {
-        closesocket(m_socket);
-    }
-};
-
-class Udp
-{
-private:
-    Socket m_socket;
-    WSADATA m_wsa;
-    struct sockaddr_in m_client; int32_t m_client_len;
-    std::string m_errorString;
-
-public:
-    bool m_status;
-    Udp(ConnectionSide side, std::string ip_address, uint32_t port)
-    {
-        m_status = true;
-        m_errorString = "No Error";
-        if (WSAStartup(MAKEWORD(2, 2), &m_wsa) != 0)
-        {
-            m_errorString = "WSA Startup Failed, Error Code " + std::to_string(WSAGetLastError());
-            m_status = false;
-        }
-        if (!m_socket.Set(UDP, ip_address, port))
-        {
-            m_errorString = "Socket Creation Failed " + std::to_string(WSAGetLastError());
-            m_status = false;
-        }
-        else
-        {
-            if (side == SERVER)
-            {
-                if (!m_socket.Bind())
-                {
-                    m_errorString = "Bind Failed, Error Code " + std::to_string(WSAGetLastError());
-                    m_status = false;
-                }
-            }
-        }
-    }
-
-    std::string getLastError()
+    std::string getErrorString()
     {
         return m_errorString;
     }
-
-    int send(char* buffer, int length, Socket& client)
+    ~Socket()
     {
-        return sendto(m_socket.m_socket, buffer, length, 0, (struct sockaddr*)&client.m_sockaddr, sizeof(client.m_sockaddr));
-    }
-
-    int send(char* buffer, int length, sockaddr_in& client, int& clientlen)
-    {
-        return sendto(m_socket.m_socket, buffer, length, 0, (struct sockaddr*)&client, clientlen);
-    }
-
-    int receive(char* buffer, sockaddr_in& clientInfo, int& clientInfoLen, int MaxBufferLength = 512)
-    {
-        return recvfrom(m_socket.m_socket, buffer, MaxBufferLength, 0, (struct sockaddr*)&clientInfo, &clientInfoLen);
-    }
-    int receive(char* buffer, int MaxBufferLength = 512)
-    {
-        return recvfrom(m_socket.m_socket, buffer, MaxBufferLength, 0, NULL, NULL);
+        closesocket(m_socket);
+        WSACleanup();
     }
 };
