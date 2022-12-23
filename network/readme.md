@@ -1,13 +1,3 @@
-Test Criteria for Send Messages
-    Check Header
-    Check Values in Reset State
-    Check Values after Set
-    Compare CRC with local CRC Implementation
+#network
 
-Test Criteria for Receive Messages
-    Check Header
-    Check Values in Reset State
-    Check Values after decode
-
-Connection Request Tested
-Connection Request Reply Tested
+A simple network interface (Windows Based) which supports UDP socket with a simple interface

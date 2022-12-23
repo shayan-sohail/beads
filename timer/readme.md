@@ -1,13 +1,3 @@
-Test Criteria for Send Messages
-    Check Header
-    Check Values in Reset State
-    Check Values after Set
-    Compare CRC with local CRC Implementation
+#timer
 
-Test Criteria for Receive Messages
-    Check Header
-    Check Values in Reset State
-    Check Values after decode
-
-Connection Request Tested
-Connection Request Reply Tested
+A timer class with internal thread that supports calling callback functions periodically or once with the specified duration/delay.
