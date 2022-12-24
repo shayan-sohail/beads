@@ -10,7 +10,7 @@ Convert functions to primitive data types
 */
 
 
-using table = std::vector<std::string, std::vector<uint8_t>>;
+using table = std::map<std::string, std::vector<uint8_t>>;
 /*
 This table Implementation should look like
 

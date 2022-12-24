@@ -20,20 +20,35 @@ public:
     int32_t m_len;
 
     Socket() {}
-    Socket(SocketType type, std::string_view ipaddress, uint16_t port)
+    Socket(SocketType type, std::string_view ipaddress, uint16_t port, uint32_t rxTimeout = NULL)
     {
         m_status = true;
         m_errorString = "No Error";
         if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
         {
-            m_errorString = "WSA Startup Failed. Error Code : " + WSAGetLastError();
+            m_errorString = "WSA Startup Failed. Error Code : " + std::to_string(WSAGetLastError());
             m_status = false;
         }
         m_socket = socket(AF_INET, type, 0);
         if (m_socket == INVALID_SOCKET)
         {
-            m_errorString = "Socket Creation Failed. Error Code : " + WSAGetLastError();
+            m_errorString = "Socket Creation Failed. Error Code : " + std::to_string(WSAGetLastError());
             m_status = false;
+        }
+
+        if (rxTimeout != NULL)
+        {
+            struct timeval tv;
+            tv.tv_sec = 0;
+            tv.tv_usec = rxTimeout;
+            if (setsockopt(m_socket, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(tv)) < 0)
+            {
+                m_status = false;
+                m_errorString = "Socket Timeout Failed. Error Code: " + std::to_string(WSAGetLastError());
+            }
+            else {
+                std::cout << "All ok bro" << std::endl;
+            }
         }
         m_sockaddr.sin_family = AF_INET;
         m_sockaddr.sin_addr.s_addr = inet_addr(ipaddress.data());
@@ -41,11 +56,11 @@ public:
         m_len = sizeof(m_sockaddr);
     }
 
-    ssize_t receive(Socket& sourceInfo, char* buffer, ssize_t maxLength)
+    size_t receive(Socket& sourceInfo, char* buffer, size_t maxLength)
     {
         return recvfrom(m_socket, buffer, maxLength, 0, (struct sockaddr*)&sourceInfo.m_sockaddr, &sourceInfo.m_len);
     }
-    ssize_t send(Socket& destinationInfo, char* message, ssize_t length)
+    size_t send(Socket& destinationInfo, char* message, size_t length)
     {
         return sendto(m_socket, message, length, 0, (struct sockaddr*)&destinationInfo.m_sockaddr, destinationInfo.m_len);
     }
