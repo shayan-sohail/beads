@@ -51,7 +51,10 @@ public:
     void remove(void (*callback)(void))
     {
         while (m_toRemove != 0) {}
-        m_toRemove = (uint64_t)callback;
+        if (m_callbacks.find((uint64_t)callback) != m_callbacks.end())
+        {
+            m_toRemove = (uint64_t)callback;
+        }
     }
 
     ~Timer()
