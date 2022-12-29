@@ -2,10 +2,11 @@
 #include <array>
 int main()
 {
-    std::array<char, 10> buffer;
-    Socket socket(SocketType::UDP, "127.0.0.1", 8888), receiverInfo;
+    std::array<char, 50> buffer;
+    Socket socket(SocketType::UDP, "127.0.0.1", 8890), receiverInfo;
     socket.bind_socket();
-
+    std::cout << socket.getErrorString() << std::endl;
+    printf("Last Error: %d\n", WSAGetLastError());
     while (1)
     {
         std::cout << "Receiving data...\n";
@@ -15,7 +16,7 @@ int main()
             printf("Message Received %s\n", buffer.data());
         }
         else {
-            std::cout << "Receive Error\n";
+            printf("Error: %d\n", WSAGetLastError());
         }
     }
 

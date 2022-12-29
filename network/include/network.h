@@ -20,7 +20,7 @@ public:
     int32_t m_len;
 
     Socket() {}
-    Socket(SocketType type, std::string_view ipaddress, uint16_t port, uint32_t rxTimeout = NULL)
+    Socket(SocketType type, std::string_view ipaddress, uint16_t port, int rxTimeout = 0)
     {
         m_status = true;
         m_errorString = "No Error";
@@ -36,18 +36,12 @@ public:
             m_status = false;
         }
 
-        if (rxTimeout != NULL)
+        if (rxTimeout != 0)
         {
-            struct timeval tv;
-            tv.tv_sec = 0;
-            tv.tv_usec = rxTimeout;
-            if (setsockopt(m_socket, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(tv)) < 0)
+            if (setsockopt(m_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&rxTimeout, sizeof(rxTimeout)) < 0)
             {
                 m_status = false;
                 m_errorString = "Socket Timeout Failed. Error Code: " + std::to_string(WSAGetLastError());
-            }
-            else {
-                std::cout << "All ok bro" << std::endl;
             }
         }
         m_sockaddr.sin_family = AF_INET;
@@ -56,9 +50,9 @@ public:
         m_len = sizeof(m_sockaddr);
     }
 
-    size_t receive(Socket& sourceInfo, char* buffer, size_t maxLength)
+    size_t receive(char* buffer, size_t maxLength)
     {
-        return recvfrom(m_socket, buffer, maxLength, 0, (struct sockaddr*)&sourceInfo.m_sockaddr, &sourceInfo.m_len);
+        return recvfrom(m_socket, buffer, maxLength, 0, NULL, NULL);
     }
     size_t send(Socket& destinationInfo, char* message, size_t length)
     {
