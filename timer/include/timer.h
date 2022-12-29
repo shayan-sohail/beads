@@ -50,9 +50,9 @@ public:
 
     void remove(void (*callback)(void))
     {
-        while (m_toRemove != 0) {}
         if (m_callbacks.find((uint64_t)callback) != m_callbacks.end())
         {
+            while (m_toRemove != 0) {}
             m_toRemove = (uint64_t)callback;
         }
     }
