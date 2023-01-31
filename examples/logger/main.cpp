@@ -1,11 +1,12 @@
 #include <iostream>
-#include "logger.h"
+#include "other.h"
+#include "../../logger/logger.h"
 
 LogStream System("System"), Network("Network"), Timer("Timer");
 
 int main()
 {
-    log() << "Hello World\n";
+    log() << "Test Example\n";
     LogStream::default_stdout = false;
     log() << "Hello False\n";
     log() << "Hello False\n";
@@ -13,5 +14,9 @@ int main()
     LogStream::default_stdout = true;
     log() << "Hello True\n";
     log() << "Hello True\n";
+    log(System, WARNING) << "System Warning" << std::endl;
+    log(Network, SUCCESS) << "Network Success" << std::endl;
+    log(Timer, ERROR) << "Timer Error" << std::endl;
+    printOtherLogs();
     return 0;
 }
